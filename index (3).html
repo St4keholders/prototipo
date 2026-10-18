@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recorrido 360 · Prototipo</title>
+<meta name="description" content="Prototipo: recorridos virtuales 360° de inmuebles en arriendo creados con panorámicas del celular.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pannellum/2.5.6/pannellum.js"></script>
+<style>
+:root{
+  --bg:#f7fbff; --bg-card:#ffffff; --bg-glass:rgba(255,255,255,0.72);
+  --fg:#1a2d3d; --fg-soft:#3d5a73; --dim:#7a99b5;
+  --sky:#5ba3d9; --sky-deep:#3b7dbf; --sky-light:#a0d0f0; --sky-pale:#dceefb; --sky-dim:rgba(91,163,217,0.10);
+  --line:rgba(26,45,61,0.10); --line-strong:rgba(26,45,61,0.18);
+  --warn:#b7791f; --warn-bg:#fdf6e7;
+  --shadow-sm:0 1px 3px rgba(26,45,61,0.06);
+  --shadow-md:0 6px 20px rgba(26,45,61,0.08);
+  --shadow-lg:0 18px 48px rgba(26,45,61,0.10);
+  --display:'DM Serif Display', Georgia, serif;
+  --sans:'DM Sans', system-ui, -apple-system, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+  --ease:cubic-bezier(0.22, 1, 0.36, 1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+img,svg,canvas{display:block;max-width:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:6px}
+[hidden]{display:none !important}
+main{flex:1}
+.container{max-width:1200px;margin:0 auto;padding:0 2.5rem}
+
+/* ---------- Ambient ---------- */
+.ambient{position:fixed;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.cloud{position:absolute;border-radius:50%;background:radial-gradient(circle, rgba(160,208,240,0.35) 0%, rgba(160,208,240,0) 70%);animation:cloudDrift 60s ease-in-out infinite alternate}
+@keyframes cloudDrift{from{transform:translateX(-30px)}to{transform:translateX(40px)}}
+
+/* ---------- Header ---------- */
+.site-header{position:sticky;top:0;z-index:50;background:var(--bg-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:1rem;height:68px}
+.brand{display:flex;align-items:center;gap:.6rem}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--sky),var(--sky-deep));display:grid;place-items:center;color:#fff}
+.brand-name{font-family:var(--display);font-size:1.3rem;letter-spacing:.01em}
+.brand-name em{color:var(--sky-deep)}
+.nav{display:flex;gap:1.6rem;font-size:.92rem;font-weight:500;color:var(--fg-soft)}
+.nav a{transition:color .25s}
+.nav a:hover{color:var(--sky-deep)}
+.proto-badge{font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;padding:.35rem .7rem;border-radius:99px;background:var(--sky-dim);border:1px solid rgba(91,163,217,.25);color:var(--sky-deep);white-space:nowrap}
+@media (max-width:860px){.nav{display:none}}
+
+/* ---------- Common ---------- */
+.eyebrow{display:flex;align-items:center;gap:.7rem;font-family:var(--mono);font-size:.66rem;letter-spacing:.26em;text-transform:uppercase;color:var(--dim);margin-bottom:1rem}
+.eyebrow::before{content:"";width:24px;height:2px;background:var(--sky);border-radius:2px}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.12}
+h1 em,h2 em,h3 em{font-style:italic;color:var(--sky-deep)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;padding:.85rem 1.35rem;border-radius:10px;font-weight:600;font-size:.95rem;transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,border-color .25s;white-space:nowrap}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-sky{background:var(--sky);color:#fff;box-shadow:0 6px 18px rgba(91,163,217,.28)}
+.btn-sky:hover{background:var(--sky-deep);transform:translateY(-2px);box-shadow:0 10px 26px rgba(59,125,191,.32)}
+.btn-ghost{background:var(--bg-card);border:1px solid var(--line-strong);color:var(--fg)}
+.btn-ghost:hover{border-color:var(--sky);color:var(--sky-deep);transform:translateY(-1px)}
+.btn-sm{padding:.55rem .9rem;font-size:.85rem;border-radius:8px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.chip{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;padding:.3rem .65rem;border-radius:99px;background:var(--sky-dim);color:var(--sky-deep);border:1px solid rgba(91,163,217,.22)}
+.link-btn{font-weight:500;color:var(--fg-soft);display:inline-flex;align-items:center;gap:.4rem;font-size:.92rem}
+.link-btn:hover{color:var(--sky-deep)}
+.link-btn svg{width:16px;height:16px}
+
+/* ---------- Home ---------- */
+.hero{padding:5rem 0 4rem}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:3.5rem;align-items:center}
+.hero-title{font-size:clamp(2.4rem,6vw,3.8rem);line-height:1.1;margin-bottom:1.2rem}
+.hero-sub{font-size:1.08rem;color:var(--fg-soft);max-width:34rem;margin-bottom:2rem}
+.hero-ctas{display:flex;gap:.8rem;flex-wrap:wrap}
+.prop-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-md);transition:transform .25s var(--ease),box-shadow .25s var(--ease);position:relative;cursor:pointer;text-align:left;width:100%}
+.prop-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.prop-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--sky),var(--sky-light));opacity:0;transition:opacity .25s;z-index:2}
+.prop-card:hover::before{opacity:1}
+.prop-media{position:relative;aspect-ratio:16/10;background:var(--sky-pale)}
+.prop-media canvas,.prop-media img{width:100%;height:100%;object-fit:cover}
+.prop-price{position:absolute;left:1rem;top:1rem;background:var(--fg);color:#fff;font-family:var(--mono);font-size:.85rem;font-weight:500;padding:.35rem .7rem;border-radius:8px}
+.prop-360{position:absolute;right:1rem;bottom:1rem;background:rgba(255,255,255,.92);font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;padding:.4rem .7rem;border-radius:99px;display:flex;gap:.4rem;align-items:center;color:var(--sky-deep)}
+.prop-360 svg{width:14px;height:14px}
+.prop-body{padding:1.2rem 1.3rem 1.4rem}
+.prop-title{font-family:var(--display);font-size:1.3rem;margin-bottom:.2rem}
+.prop-loc{color:var(--fg-soft);font-size:.92rem;margin-bottom:.8rem}
+.prop-meta{display:flex;flex-wrap:wrap;gap:.4rem}
+.prop-meta span{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;padding:.25rem .55rem;border-radius:8px;background:var(--bg);border:1px solid var(--line);color:var(--fg-soft)}
+.how{padding:2rem 0 6rem}
+.how-head{margin-bottom:2.5rem}
+.how-head h2{font-size:clamp(1.8rem,3.8vw,2.6rem)}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.how-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;padding:1.6rem;box-shadow:var(--shadow-sm)}
+.how-num{width:40px;height:40px;border-radius:12px;background:var(--sky-dim);color:var(--sky-deep);display:grid;place-items:center;font-family:var(--mono);font-weight:500;margin-bottom:1rem}
+.how-card h3{font-size:1.2rem;margin-bottom:.4rem}
+.how-card p{color:var(--fg-soft);font-size:.95rem}
+@media (max-width:900px){.hero-grid{grid-template-columns:1fr;gap:2.5rem}.how-grid{grid-template-columns:1fr}.hero{padding:3rem 0}}
+@media (max-width:720px){.container{padding:0 1rem}}
+
+/* ---------- Tour view ---------- */
+.tour-wrap{padding-top:1.6rem;padding-bottom:4rem}
+.tour-top{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;flex-wrap:wrap;margin:1rem 0 1.2rem}
+.tour-title{font-size:clamp(1.6rem,3.6vw,2.4rem)}
+.tour-loc{color:var(--fg-soft)}
+.tour-price{font-family:var(--mono);font-size:1.1rem;font-weight:500;color:var(--fg);background:var(--bg-card);border:1px solid var(--line);padding:.5rem .9rem;border-radius:10px}
+.tour-price small{color:var(--dim);font-size:.75rem}
+.viewer-shell{position:relative;border-radius:16px;overflow:hidden;background:#0f1c27;box-shadow:var(--shadow-lg)}
+#pano{width:100%;height:min(68vh,640px);min-height:340px}
+.viewer-overlay{position:absolute;right:1rem;top:1rem;z-index:5;display:flex;gap:.5rem;align-items:center;pointer-events:none}
+.scene-pill{background:rgba(26,45,61,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border-radius:99px;padding:.45rem .9rem;font-size:.9rem;font-weight:500;display:flex;gap:.6rem;align-items:center}
+.scene-pill .count{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;color:var(--sky-light)}
+.drag-hint{position:absolute;left:50%;bottom:1.2rem;transform:translateX(-50%);z-index:5;background:rgba(255,255,255,.9);border-radius:99px;padding:.45rem .9rem;font-size:.82rem;color:var(--fg-soft);display:flex;align-items:center;gap:.5rem;pointer-events:none;transition:opacity .6s;white-space:nowrap}
+.drag-hint svg{width:16px;height:16px}
+.viewer-loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;z-index:6;background:#0f1c27}
+.tour-nav{display:flex;align-items:center;gap:.8rem;margin-top:1rem}
+.strip{flex:1;display:flex;gap:.6rem;overflow-x:auto;padding:.3rem .1rem .5rem;scrollbar-width:thin}
+.strip-item{flex:none;width:132px;border-radius:10px;overflow:hidden;border:2px solid transparent;background:var(--bg-card);box-shadow:var(--shadow-sm);transition:border-color .25s,transform .25s var(--ease);text-align:left}
+.strip-item:hover{transform:translateY(-2px)}
+.strip-item.active{border-color:var(--sky)}
+.strip-item img{width:100%;aspect-ratio:16/10;object-fit:cover;background:var(--sky-pale)}
+.strip-item span{display:block;padding:.35rem .55rem;font-size:.8rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip-item b{font-family:var(--mono);font-weight:500;color:var(--dim);font-size:.7rem;margin-right:.3rem}
+.nav-arrow{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line-strong);background:var(--bg-card);display:grid;place-items:center;transition:border-color .25s,color .25s}
+.nav-arrow:hover{border-color:var(--sky);color:var(--sky-deep)}
+.nav-arrow svg{width:20px;height:20px}
+.nav-arrow[disabled]{opacity:.35;pointer-events:none}
+.edit-bar{margin-top:1rem;background:var(--bg-card);border:1px dashed var(--sky);border-radius:16px;padding:1rem 1.2rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.edit-bar p{flex:1 1 280px;font-size:.92rem;color:var(--fg-soft)}
+.edit-bar p strong{color:var(--fg)}
+.edit-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+.tour-note{margin-top:1rem;font-size:.85rem;color:var(--dim)}
+
+.pnlm-panorama-info{display:none !important}
+/* Hotspots */
+.hs-nav{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 6px 20px rgba(0,0,0,.25);display:grid;place-items:center;color:var(--sky-deep);cursor:pointer;transition:transform .25s var(--ease)}
+.hs-nav:hover{transform:scale(1.08)}
+.hs-nav::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,255,255,.75);animation:hsPulse 2.2s ease-out infinite}
+@keyframes hsPulse{from{transform:scale(.85);opacity:1}to{transform:scale(1.35);opacity:0}}
+.hs-nav svg{width:24px;height:24px}
+.hs-nav.back{background:rgba(26,45,61,.82);color:#fff}
+.hs-label{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;background:rgba(26,45,61,.82);color:#fff;font-size:.78rem;font-weight:500;padding:.3rem .65rem;border-radius:99px;pointer-events:none}
+
+/* ---------- Create view ---------- */
+.create-wrap{padding-top:1.6rem;padding-bottom:5rem;max-width:880px;margin:0 auto}
+.stepper{display:flex;gap:.4rem;margin:1.4rem 0 1.6rem}
+.stepper button{flex:1;height:6px;border-radius:99px;background:var(--line);transition:background .25s}
+.stepper button.done{background:var(--sky-light)}
+.stepper button.current{background:var(--sky)}
+.step-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-md);overflow:hidden}
+.step-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.step-art{background:linear-gradient(160deg,var(--sky-pale),#eef6fd);display:grid;place-items:center;padding:1.5rem;min-height:300px}
+.step-art svg{width:100%;max-width:320px;height:auto}
+.step-copy{padding:2rem 2rem 1.6rem;display:flex;flex-direction:column}
+.step-kicker{font-family:var(--mono);font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:.6rem}
+.step-copy h2{font-size:clamp(1.5rem,3vw,2rem);margin-bottom:1rem}
+.step-list{list-style:none;display:flex;flex-direction:column;gap:.7rem;margin-bottom:1.2rem}
+.step-list li{display:flex;gap:.7rem;color:var(--fg-soft);font-size:.95rem}
+.step-list li::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sky);margin-top:.55rem}
+.step-list strong{color:var(--fg);font-weight:600}
+.callout{background:var(--sky-dim);border-left:3px solid var(--sky);border-radius:8px;padding:.8rem 1rem;font-size:.9rem;color:var(--fg-soft)}
+.callout strong{color:var(--fg)}
+.step-foot{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 2rem;border-top:1px solid var(--line);background:#fbfdff}
+.step-foot .right{display:flex;gap:.6rem}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1.2rem}
+.check{display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;color:var(--fg-soft);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem}
+.check svg{width:22px;height:22px;flex:none;color:var(--sky-deep)}
+@media (max-width:760px){.step-grid{grid-template-columns:1fr}.step-art{min-height:220px}.step-copy{padding:1.5rem 1.2rem 1.2rem}.step-foot{padding:1rem 1.2rem}.checks{grid-template-columns:1fr}}
+
+/* Toon animations */
+.toon-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;fill:var(--sky-deep)}
+.toon-spin{transform-box:view-box;transform-origin:130px 110px;animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toon-screen{animation:screenGlow 2.4s ease-in-out infinite}
+@keyframes screenGlow{50%{fill:#dceefb}}
+.toon-route{stroke-dasharray:7 7;animation:route 1.6s linear infinite}
+@keyframes route{to{stroke-dashoffset:-28}}
+.toon-pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2s ease-out infinite}
+@keyframes pulse{from{transform:scale(.6);opacity:.9}to{transform:scale(1.8);opacity:0}}
+.toon-sweep{animation:sweep 3.2s var(--ease) infinite alternate}
+@keyframes sweep{from{transform:translateX(-26px)}to{transform:translateX(26px)}}
+
+/* Upload */
+.upload-pane{padding:2rem}
+.dropzone{border:2px dashed var(--sky-light);border-radius:16px;background:var(--bg);padding:2rem 1.2rem;text-align:center;transition:border-color .25s,background .25s;cursor:pointer;display:block}
+.dropzone:hover,.dropzone.over{border-color:var(--sky);background:var(--sky-dim)}
+.dropzone svg{width:40px;height:40px;margin:0 auto .8rem;color:var(--sky)}
+.dropzone strong{display:block;font-size:1.05rem;margin-bottom:.25rem}
+.dropzone span{color:var(--fg-soft);font-size:.9rem}
+.scene-list{list-style:none;display:flex;flex-direction:column;gap:.7rem;margin:1.4rem 0}
+.scene-item{display:grid;grid-template-columns:auto 128px 1fr auto;gap:.9rem;align-items:center;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;padding:.7rem;box-shadow:var(--shadow-sm)}
+.scene-num{width:30px;height:30px;border-radius:8px;background:var(--sky-dim);color:var(--sky-deep);display:grid;place-items:center;font-family:var(--mono);font-size:.8rem;font-weight:500}
+.scene-item img{width:128px;aspect-ratio:16/10;object-fit:cover;border-radius:8px;background:var(--sky-pale)}
+.scene-fields{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.scene-fields input{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:.45rem .6rem;background:var(--bg-card);font-weight:500}
+.scene-fields input:focus{outline:none;border-color:var(--sky)}
+.scene-sub{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.78rem;color:var(--dim)}
+.scene-sub select{border:1px solid var(--line);border-radius:8px;padding:.2rem .4rem;background:var(--bg);font-size:.78rem;color:var(--fg-soft)}
+.tag-start{font-family:var(--mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;background:var(--fg);color:#fff;padding:.15rem .45rem;border-radius:99px}
+.tag-warn{font-size:.78rem;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:.25rem .5rem}
+.tag-ai{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--sky-deep)}
+.scene-ctrl{display:flex;flex-direction:column;gap:.25rem}
+.icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;color:var(--fg-soft);background:var(--bg-card);transition:border-color .25s,color .25s}
+.icon-btn:hover{border-color:var(--sky);color:var(--sky-deep)}
+.icon-btn svg{width:16px;height:16px}
+.icon-btn[disabled]{opacity:.3;pointer-events:none}
+@media (max-width:640px){.scene-item{grid-template-columns:auto 1fr auto}.scene-item img{grid-column:2;grid-row:1;width:100%}.scene-fields{grid-column:1 / -1}.scene-ctrl{flex-direction:row;grid-column:3;grid-row:1}}
+.upload-actions{display:flex;gap:.6rem;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.upload-actions .right{display:flex;gap:.6rem;flex-wrap:wrap}
+.status{margin-top:1rem;font-size:.9rem;border-radius:12px;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);color:var(--fg-soft)}
+.status.warn{background:var(--warn-bg);border-color:rgba(183,121,31,.25);color:#7a5414}
+.status.ok{background:var(--sky-dim);border-color:rgba(91,163,217,.25)}
+.status ul{margin:.4rem 0 0 1.1rem}
+.status .btn{margin-top:.6rem}
+.spinner{width:16px;height:16px;border:2px solid var(--sky-light);border-top-color:var(--sky-deep);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:-3px;margin-right:.4rem}
+
+/* ---------- Footer & toast ---------- */
+.site-footer{border-top:1px solid var(--line);padding:2rem 0;color:var(--dim);font-size:.85rem}
+.footer-inner{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.footer-links{display:flex;gap:1.2rem}
+.toast{position:fixed;left:50%;bottom:1.5rem;transform:translate(-50%,20px);background:var(--fg);color:#fff;padding:.7rem 1.1rem;border-radius:10px;font-size:.9rem;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s var(--ease);z-index:100;max-width:calc(100% - 2rem);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+.reveal{opacity:0;transform:translateY(4px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<div class="ambient" aria-hidden="true">
+  <div class="cloud" style="width:520px;height:520px;left:-120px;top:60px"></div>
+  <div class="cloud" style="width:640px;height:640px;right:-200px;top:320px;animation-duration:80s"></div>
+</div>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="#" class="brand" data-go="home" aria-label="Inicio">
+      <span class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2.5"/></svg></span>
+      <span class="brand-name">Recorrido <em>360</em></span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#" data-fake>Arrendar</a>
+      <a href="#" data-fake>Publicar inmueble</a>
+      <a href="#" data-fake>Cómo funciona</a>
+      <a href="#" data-fake>Ingresar</a>
+    </nav>
+    <span class="proto-badge">Prototipo</span>
+  </div>
+</header>
+
+<main>
+<!-- =================== HOME =================== -->
+<section id="view-home">
+  <div class="hero">
+    <div class="container hero-grid">
+      <div class="reveal">
+        <div class="eyebrow">Arriendos de largo plazo</div>
+        <h1 class="hero-title">Conoce tu próximo hogar <em>sin agendar cita</em></h1>
+        <p class="hero-sub">Recorre el inmueble por dentro desde tu celular, a la hora que quieras. Los propietarios lo crean con panorámicas tomadas con cualquier teléfono.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-sky" data-go="tour-demo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>
+            Ver recorrido demo
+          </button>
+          <button class="btn btn-ghost" data-go="create">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+            Crear mi recorrido
+          </button>
+        </div>
+      </div>
+      <button class="prop-card reveal" data-go="tour-demo" aria-label="Abrir recorrido del apartamento demo">
+        <div class="prop-media">
+          <canvas id="cardCanvas" width="640" height="400" aria-hidden="true"></canvas>
+          <span class="prop-price" id="cardPrice">$1.8M</span>
+          <span class="prop-360"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg>Recorrido 360°</span>
+        </div>
+        <div class="prop-body">
+          <div class="prop-title" id="cardTitle">Apartamento en Laureles</div>
+          <div class="prop-loc" id="cardLoc">Laureles · Medellín, Antioquia</div>
+          <div class="prop-meta" id="cardMeta"></div>
+        </div>
+      </button>
+    </div>
+  </div>
+  <div class="how">
+    <div class="container">
+      <div class="how-head reveal">
+        <div class="eyebrow">Cómo funciona</div>
+        <h2>Del celular a un <em>recorrido</em> en minutos</h2>
+      </div>
+      <div class="how-grid">
+        <div class="how-card reveal"><div class="how-num">01</div><h3>Toma panorámicas</h3><p>Una por espacio, empezando en la entrada. Te guiamos paso a paso, con cualquier celular.</p></div>
+        <div class="how-card reveal"><div class="how-num">02</div><h3>La IA las organiza</h3><p>Nombra cada espacio y revisa la calidad de las fotos, respetando el orden en que las tomaste.</p></div>
+        <div class="how-card reveal"><div class="how-num">03</div><h3>Se recorre sin cita</h3><p>Quien busca arriendo pasa de un espacio a otro tocando flechas, como en un mapa.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== TOUR =================== -->
+<section id="view-tour" hidden>
+  <div class="container tour-wrap">
+    <button class="link-btn" data-back>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      <span id="backLabel">Volver al inicio</span>
+    </button>
+    <div class="tour-top">
+      <div>
+        <div class="eyebrow" id="tourEyebrow">Recorrido virtual</div>
+        <h1 class="tour-title" id="tourTitle">—</h1>
+        <div class="tour-loc" id="tourLoc"></div>
+      </div>
+      <div class="tour-price" id="tourPrice"></div>
+    </div>
+    <div class="viewer-shell">
+      <div id="pano"></div>
+      <div class="viewer-overlay"><div class="scene-pill"><span id="sceneName">—</span><span class="count" id="sceneCount"></span></div></div>
+      <div class="drag-hint" id="dragHint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5a2 2 0 0 1 4 0v6"/><path d="M12 11V9a2 2 0 0 1 4 0v4"/><path d="M16 13a2 2 0 0 1 4 0v3a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-3-5a2 2 0 0 1 3-2l2 2"/></svg>Arrastra para mirar · toca las flechas para avanzar</div>
+      <div class="viewer-loading" id="viewerLoading">Preparando recorrido…</div>
+    </div>
+    <div class="tour-nav">
+      <button class="nav-arrow" id="prevBtn" aria-label="Espacio anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="strip" id="strip" role="list"></div>
+      <button class="nav-arrow" id="nextBtn" aria-label="Espacio siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="edit-bar" id="editBar" hidden>
+      <p><strong>Ajusta las flechas.</strong> Gira la vista hasta la puerta que lleva al siguiente espacio y toca el botón. Haz lo mismo con la puerta por la que llegaste.</p>
+      <div class="edit-actions">
+        <button class="btn btn-sky btn-sm" id="setNext">Flecha «Siguiente» aquí</button>
+        <button class="btn btn-ghost btn-sm" id="setPrev">Flecha «Volver» aquí</button>
+        <button class="btn btn-ghost btn-sm" id="setStart">Vista inicial aquí</button>
+      </div>
+    </div>
+    <p class="tour-note" id="tourNote"></p>
+  </div>
+</section>
+
+<!-- =================== CREATE =================== -->
+<section id="view-create" hidden>
+  <div class="container create-wrap">
+    <button class="link-btn" data-go="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Volver al inicio
+    </button>
+    <div class="stepper" id="stepper" aria-label="Pasos"></div>
+
+    <div class="step-card">
+      <!-- Paso 1 -->
+      <div class="step" data-step="1">
+        <div class="step-grid">
+          <div class="step-art">
+            <svg viewBox="0 0 260 220" role="img" aria-label="Persona sosteniendo el celular en vertical a la altura del pecho">
+              <ellipse cx="130" cy="206" rx="52" ry="6" fill="#1a2d3d" opacity=".08"/>
+              <rect x="112" y="150" width="15" height="54" rx="7" fill="#3d5a73"/>
+              <rect x="133" y="150" width="15" height="54" rx="7" fill="#3d5a73"/>
+              <rect x="98" y="78" width="64" height="82" rx="24" fill="#5ba3d9"/>
+              <circle cx="130" cy="52" r="23" fill="#f1c8a4"/>
+              <path d="M107 50c1-18 12-27 25-26c14 1 22 11 21 25c-7-9-15-12-24-12c-9 0-16 4-22 13z" fill="#1a2d3d"/>
+              <circle cx="122" cy="55" r="2.2" fill="#1a2d3d"/><circle cx="138" cy="55" r="2.2" fill="#1a2d3d"/>
+              <path d="M124 64q6 5 12 0" stroke="#1a2d3d" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M106 94q-12 24 14 24" stroke="#4a91c7" stroke-width="12" fill="none" stroke-linecap="round"/>
+              <path d="M154 94q12 24-14 24" stroke="#4a91c7" stroke-width="12" fill="none" stroke-linecap="round"/>
+              <rect x="118" y="88" width="24" height="40" rx="4" fill="#1a2d3d"/>
+              <rect class="toon-screen" x="121" y="92" width="18" height="30" rx="2" fill="#a0d0f0"/>
+              <circle cx="119" cy="117" r="5.5" fill="#f1c8a4"/><circle cx="141" cy="117" r="5.5" fill="#f1c8a4"/>
+              <line x1="14" y1="108" x2="108" y2="108" stroke="#3b7dbf" stroke-width="1.5" stroke-dasharray="4 4"/>
+              <text x="14" y="88" class="toon-label">Altura</text><text x="14" y="100" class="toon-label">del pecho</text>
+              <path d="M184 84v48" stroke="#3b7dbf" stroke-width="1.5"/>
+              <path d="M179 90l5-6 5 6M179 126l5 6 5-6" stroke="#3b7dbf" stroke-width="1.5" fill="none"/>
+              <text x="194" y="112" class="toon-label">Vertical</text>
+            </svg>
+          </div>
+          <div class="step-copy">
+            <div class="step-kicker">Paso 1 de 6</div>
+            <h2>Sostén el celular <em>en vertical</em></h2>
+            <ul class="step-list">
+              <li><span>Abre la cámara y elige el modo <strong>Panorámica</strong> (en Android suele llamarse «Panorama»; en iPhone, «Pano»).</span></li>
+              <li><span>Celular <strong>de pie, no acostado</strong>, a la altura del pecho.</span></li>
+              <li><span>Codos pegados al cuerpo para que el celular no suba ni baje.</span></li>
+            </ul>
+            <div class="callout">Funciona con celulares de <strong>gama baja y alta</strong>. Nosotros ajustamos el tamaño y el ángulo de cada foto para que todas se vean igual en el recorrido.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="step" data-step="2" hidden>
+        <div class="step-grid">
+          <div class="step-art">
+            <svg viewBox="0 0 260 220" role="img" aria-label="Vista desde arriba: la persona gira alrededor del celular, que queda fijo en el centro">
+              <circle cx="130" cy="110" r="78" fill="#fff" fill-opacity=".55" stroke="#a0d0f0" stroke-dasharray="3 6"/>
+              <defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#3b7dbf"/></marker></defs>
+              <path d="M48.6 63A94 94 0 0 1 211.4 63" fill="none" stroke="#3b7dbf" stroke-width="2" marker-end="url(#ah)"/>
+              <g class="toon-spin">
+                <path d="M130 110L98.3 38.7A78 78 0 0 1 161.7 38.7Z" fill="#5ba3d9" opacity=".22"/>
+                <line x1="110" y1="138" x2="125" y2="113" stroke="#4a91c7" stroke-width="7" stroke-linecap="round"/>
+                <line x1="150" y1="138" x2="135" y2="113" stroke="#4a91c7" stroke-width="7" stroke-linecap="round"/>
+                <ellipse cx="130" cy="144" rx="27" ry="12" fill="#5ba3d9"/>
+                <circle cx="130" cy="144" r="10.5" fill="#1a2d3d"/>
+                <rect x="121" y="106" width="18" height="7" rx="2" fill="#1a2d3d"/>
+              </g>
+              <circle cx="130" cy="110" r="3" fill="#3b7dbf"/>
+              <text x="130" y="212" text-anchor="middle" class="toon-label">El celular es el centro del giro</text>
+            </svg>
+          </div>
+          <div class="step-copy">
+            <div class="step-kicker">Paso 2 de 6</div>
+            <h2>Gira sobre el celular, <em>no sobre ti</em></h2>
+            <ul class="step-list">
+              <li><span>Toca el botón y gira <strong>despacio y siempre hacia el mismo lado</strong>.</span></li>
+              <li><span>Mueve los pies en pasos pequeños: el celular debe quedarse en el mismo punto, como el centro de un compás.</span></li>
+              <li><span>Mantén la flecha de la pantalla <strong>sobre la línea guía</strong>.</span></li>
+              <li><span>Si tu celular lo permite, <strong>da la vuelta completa</strong>. Si se detiene antes, no pasa nada.</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="step" data-step="3" hidden>
+        <div class="step-grid">
+          <div class="step-art">
+            <svg viewBox="0 0 260 220" role="img" aria-label="Plano de una sala con la posición correcta en el centro">
+              <path d="M30 30H230V190H160M100 190H30Z" fill="#fff" stroke="#3d5a73" stroke-width="4" stroke-linejoin="round"/>
+              <path d="M100 190a60 60 0 0 1 0 0" />
+              <rect x="44" y="44" width="84" height="30" rx="6" fill="#dceefb" stroke="#a0d0f0"/>
+              <rect x="170" y="56" width="44" height="60" rx="6" fill="#dceefb" stroke="#a0d0f0"/>
+              <circle cx="72" cy="140" r="16" fill="#dceefb" stroke="#a0d0f0"/>
+              <circle class="toon-pulse" cx="130" cy="112" r="14" fill="#5ba3d9" opacity=".5"/>
+              <circle cx="130" cy="112" r="9" fill="#3b7dbf"/>
+              <text x="130" y="140" text-anchor="middle" class="toon-label">Aquí</text>
+              <g opacity=".7"><circle cx="216" cy="176" r="7" fill="#7a99b5"/><path d="M210 170l12 12M222 170l-12 12" stroke="#fff" stroke-width="2"/></g>
+              <g opacity=".7"><circle cx="44" cy="96" r="7" fill="#7a99b5"/><path d="M38 90l12 12M50 90l-12 12" stroke="#fff" stroke-width="2"/></g>
+              <text x="130" y="210" text-anchor="middle" class="toon-label">Lejos de paredes y muebles</text>
+            </svg>
+          </div>
+          <div class="step-copy">
+            <div class="step-kicker">Paso 3 de 6</div>
+            <h2>Una toma desde el <em>centro</em> de cada espacio</h2>
+            <ul class="step-list">
+              <li><span>Párate en el <strong>centro</strong> del espacio, lejos de paredes y muebles.</span></li>
+              <li><span><strong>Una panorámica por espacio.</strong> Si es muy grande (por ejemplo, una sala-comedor), haz dos.</span></li>
+              <li><span>Incluye pasillos, balcones y zona de ropas: todo lo que quieras mostrar.</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 4 -->
+      <div class="step" data-step="4" hidden>
+        <div class="step-grid">
+          <div class="step-art">
+            <svg viewBox="0 0 300 230" role="img" aria-label="Plano con el orden del recorrido: entrada, sala, cocina, habitación y baño">
+              <g fill="#fff" stroke="#3d5a73" stroke-width="2.5" stroke-linejoin="round">
+                <rect x="20" y="20" width="100" height="62"/>
+                <rect x="160" y="20" width="120" height="62"/>
+                <rect x="60" y="82" width="180" height="80"/>
+                <rect x="240" y="82" width="45" height="80"/>
+                <rect x="100" y="162" width="100" height="44"/>
+              </g>
+              <g class="toon-label" style="font-size:8px">
+                <text x="70" y="36" text-anchor="middle">Cocina</text>
+                <text x="220" y="36" text-anchor="middle">Habitación</text>
+                <text x="74" y="154">Sala</text>
+                <text x="262" y="156" text-anchor="middle">Baño</text>
+                <text x="158" y="180">Entrada</text>
+              </g>
+              <path class="toon-route" d="M150 196V128Q110 100 72 60M150 128Q190 100 222 60M222 60Q262 90 262 128" fill="none" stroke="#3b7dbf" stroke-width="2.5" stroke-linecap="round"/>
+              <g font-family="IBM Plex Mono, monospace" font-size="11" font-weight="500" text-anchor="middle">
+                <circle cx="150" cy="196" r="10" fill="#1a2d3d"/><text x="150" y="200" fill="#fff">1</text>
+                <circle cx="150" cy="128" r="10" fill="#5ba3d9"/><text x="150" y="132" fill="#fff">2</text>
+                <circle cx="72" cy="60" r="10" fill="#5ba3d9"/><text x="72" y="64" fill="#fff">3</text>
+                <circle cx="222" cy="60" r="10" fill="#5ba3d9"/><text x="222" y="64" fill="#fff">4</text>
+                <circle cx="262" cy="128" r="10" fill="#5ba3d9"/><text x="262" y="132" fill="#fff">5</text>
+              </g>
+              <text x="196" y="222" class="toon-label">Empieza aquí</text>
+              <path d="M192 218q-18 0-30-12" fill="none" stroke="#3b7dbf" stroke-width="1.5" marker-end="url(#ah)"/>
+            </svg>
+          </div>
+          <div class="step-copy">
+            <div class="step-kicker">Paso 4 de 6</div>
+            <h2>Empieza en la <em>entrada</em> y sigue el recorrido</h2>
+            <ul class="step-list">
+              <li><span>La <strong>primera panorámica</strong> se toma en la puerta principal, mirando hacia adentro.</span></li>
+              <li><span>Avanza como si le mostraras el inmueble a un visitante: sala, comedor, cocina, habitaciones, baños, zona de ropas, balcón.</span></li>
+              <li><span><strong>El orden en que las tomes es el orden del recorrido.</strong> No saltes espacios ni vuelvas atrás.</span></li>
+            </ul>
+            <div class="callout">La IA nombra cada espacio y revisa la calidad, pero <strong>no reinventa el orden</strong>. Si algo no le cuadra, te lo sugiere y tú decides. Así evitamos errores.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 5 -->
+      <div class="step" data-step="5" hidden>
+        <div class="step-copy" style="padding-bottom:1rem">
+          <div class="step-kicker">Paso 5 de 6</div>
+          <h2>Antes de tomar las fotos, <em>prepara</em> el espacio</h2>
+          <div class="checks">
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg><span><strong>Luces encendidas</strong> en todos los espacios, también de día.</span></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18M3 12h18"/></svg><span><strong>Cortinas abiertas</strong> y ventanas despejadas.</span></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h8"/><path d="M14 3l6 2v16l-6-2z"/></svg><span><strong>Puertas abiertas</strong> para que se vea hacia dónde sigue el recorrido.</span></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="3"/><path d="M6 21v-2a6 6 0 0 1 12 0v2"/><path d="M4 4l16 16"/></svg><span><strong>Sin personas ni mascotas</strong> en la toma.</span></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span><strong>Limpia el lente</strong> de la cámara con un paño.</span></div>
+            <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M9 7l-5 5 5 5"/></svg><span><strong>Orden y aseo</strong>: guarda objetos personales y documentos.</span></div>
+          </div>
+          <div class="callout">Si usas iPhone y la página no lee tus fotos, cambia en <strong>Ajustes › Cámara › Formatos</strong> a «Más compatible» (JPG).</div>
+        </div>
+      </div>
+
+      <!-- Paso 6 -->
+      <div class="step" data-step="6" hidden>
+        <div class="upload-pane">
+          <div class="step-kicker">Paso 6 de 6</div>
+          <h2 style="font-size:clamp(1.5rem,3vw,2rem);margin-bottom:.6rem">Sube tus <em>panorámicas</em></h2>
+          <p style="color:var(--fg-soft);margin-bottom:1.2rem;font-size:.95rem">Las ordenamos por la hora en que las tomaste. La primera debe ser la entrada. Puedes cambiar el orden y los nombres antes de generar el recorrido.</p>
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <strong>Toca para elegir fotos o arrástralas aquí</strong>
+            <span>JPG o PNG · hasta 20 panorámicas</span>
+          </label>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden>
+          <ul class="scene-list" id="sceneList"></ul>
+          <div class="upload-actions" id="uploadActions" hidden>
+            <button class="btn btn-ghost btn-sm" id="aiBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+              Organizar con IA
+            </button>
+            <div class="right">
+              <button class="btn btn-ghost btn-sm" id="clearBtn">Borrar todo</button>
+              <button class="btn btn-sky" id="buildBtn">Generar recorrido</button>
+            </div>
+          </div>
+          <div id="aiStatus"></div>
+        </div>
+      </div>
+
+      <div class="step-foot">
+        <button class="link-btn" id="skipBtn">Saltar tutorial</button>
+        <div class="right">
+          <button class="btn btn-ghost btn-sm" id="backStep">Atrás</button>
+          <button class="btn btn-sky btn-sm" id="nextStep">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>Recorrido 360 · Prototipo · Los datos del inmueble demo son ficticios.</span>
+    <div class="footer-links"><a href="#" data-fake>Términos</a><a href="#" data-fake>Privacidad</a><a href="#" data-fake>Contacto</a></div>
+  </div>
+</footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= Utilidades ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const D2R = Math.PI / 180, TAU = Math.PI * 2;
+const AI_ENDPOINT = '/api/clasificar';
+const MAX_FILES = 20;
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+const fmtM = v => '$' + (v / 1e6).toFixed(1) + 'M';
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function hex(h){ const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+function hash(n){ const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+function canvasToURL(canvas, q = 0.9){
+  return new Promise(res => canvas.toBlob(b => res(URL.createObjectURL(b)), 'image/jpeg', q));
+}
+const ICON_NEXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
+const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';
+
+/* ================= Render procedural del inmueble demo =================
+   Cada espacio es una caja (ancho x alto x fondo, en metros) con puertas,
+   ventanas, vanos y muebles. Se lanza un rayo por píxel y se genera una
+   panorámica equirectangular 2:1, igual a la que produce una cámara 360. */
+function renderRoom(spec, W, H, view){
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'); const im = ctx.createImageData(W, H); const px = im.data;
+  const rw = spec.size[0], rh = spec.size[1], rd = spec.size[2];
+  const ox = spec.cam[0], oy = 1.5, oz = spec.cam[1];
+  const boxes = (spec.boxes || []).map(b => ({ x0:b.p[0], y0:b.p[1], z0:b.p[2], x1:b.q[0], y1:b.q[1], z1:b.q[2], c:hex(b.c), top:b.top ? hex(b.top) : null, wood:!!b.wood, rug:b.p[1] === 0 && b.q[1] < 0.03 }));
+  const ops = (spec.openings || []).map(o => Object.assign({}, o, { col:o.c ? hex(o.c) : null }));
+  const wallC = hex(spec.wall), floorC = hex(spec.floorColor || '#b48a5e'), ceilC = hex('#f6f5f1');
+  const frameC = hex('#f4f2ec'), doorC = hex('#7b5236'), groutC = hex('#cfcac1');
+  const Lx = rw / 2, Ly = rh - 0.12, Lz = rd / 2;
+  const out = [0, 0, 0];
+  const colSin = new Float32Array(W), colCos = new Float32Array(W);
+  if (!view) for (let x = 0; x < W; x++){ const th = ((x + 0.5) / W - 0.5) * TAU; colSin[x] = Math.sin(th); colCos[x] = Math.cos(th); }
+  const vy = view ? view.yaw * D2R : 0, tf = view ? Math.tan(view.fov / 2 * D2R) : 0;
+  const fs = Math.sin(vy), fc = Math.cos(vy);
+
+  function trace(dx, dy, dz){
+    let t = Infinity, face = -1;
+    if (dx > 1e-9){ const k = (rw - ox) / dx; if (k < t){ t = k; face = 0; } } else if (dx < -1e-9){ const k = -ox / dx; if (k < t){ t = k; face = 1; } }
+    if (dy > 1e-9){ const k = (rh - oy) / dy; if (k < t){ t = k; face = 2; } } else if (dy < -1e-9){ const k = -oy / dy; if (k < t){ t = k; face = 3; } }
+    if (dz > 1e-9){ const k = (rd - oz) / dz; if (k < t){ t = k; face = 4; } } else if (dz < -1e-9){ const k = -oz / dz; if (k < t){ t = k; face = 5; } }
+    let hb = null, bn = 0;
+    for (let i = 0; i < boxes.length; i++){
+      const b = boxes[i]; let tn = -Infinity, tx = Infinity, ax = 0, s;
+      if (Math.abs(dx) < 1e-9){ if (ox < b.x0 || ox > b.x1) continue; } else { let a = (b.x0 - ox) / dx, c = (b.x1 - ox) / dx; s = -1; if (a > c){ const q = a; a = c; c = q; s = 1; } if (a > tn){ tn = a; ax = 1 * s; } if (c < tx) tx = c; }
+      if (Math.abs(dy) < 1e-9){ if (oy < b.y0 || oy > b.y1) continue; } else { let a = (b.y0 - oy) / dy, c = (b.y1 - oy) / dy; s = -1; if (a > c){ const q = a; a = c; c = q; s = 1; } if (a > tn){ tn = a; ax = 2 * s; } if (c < tx) tx = c; }
+      if (Math.abs(dz) < 1e-9){ if (oz < b.z0 || oz > b.z1) continue; } else { let a = (b.z0 - oz) / dz, c = (b.z1 - oz) / dz; s = -1; if (a > c){ const q = a; a = c; c = q; s = 1; } if (a > tn){ tn = a; ax = 3 * s; } if (c < tx) tx = c; }
+      if (tn <= tx && tn > 1e-4 && tn < t){ t = tn; hb = b; bn = ax; }
+    }
+    const hx = ox + dx * t, hy = oy + dy * t, hz = oz + dz * t;
+    let r, g, bl, nx = 0, ny = 0, nz = 0, emissive = false;
+    if (hb){
+      // normal: el signo indica la cara de entrada
+      if (bn === 1) nx = 1; else if (bn === -1) nx = -1; else if (bn === 2) ny = 1; else if (bn === -2) ny = -1; else if (bn === 3) nz = 1; else nz = -1;
+      let c = (ny === 1 && hb.top) ? hb.top : hb.c; r = c[0]; g = c[1]; bl = c[2];
+      if (hb.wood){ const gr = 0.96 + 0.04 * Math.sin((ny ? hx : hy) * 140 + hash(hb.x0 * 9) * 6); r *= gr; g *= gr; bl *= gr; }
+      if (hb.rug){ const e = Math.min(hx - hb.x0, hb.x1 - hx, hz - hb.z0, hb.z1 - hz); if (e < 0.08){ r *= 0.82; g *= 0.82; bl *= 0.82; } }
+      const k = ny === 1 ? 1.0 : ny === -1 ? 0.55 : nx !== 0 ? 0.80 : 0.88; r *= k; g *= k; bl *= k;
+    } else if (face === 3){
+      ny = 1;
+      if (spec.floor === 'tile'){
+        const s = spec.tileSize || 0.6, gx = hx / s - Math.floor(hx / s), gz = hz / s - Math.floor(hz / s);
+        if (gx < 0.02 || gz < 0.02){ [r, g, bl] = groutC; }
+        else { const v = 0.95 + 0.05 * hash(Math.floor(hx / s) * 13 + Math.floor(hz / s) * 71); r = floorC[0] * v; g = floorC[1] * v; bl = floorC[2] * v; }
+      } else {
+        const pw = 0.19, pi = Math.floor(hz / pw), off = hash(pi) * 1.3, seg = Math.floor((hx + off) / 1.2);
+        let v = 0.84 + 0.16 * hash(pi * 31 + seg * 7);
+        v *= 0.96 + 0.04 * Math.sin(hx * 38 + hash(pi * 3) * 12);
+        const fz = hz / pw - pi, fx = (hx + off) / 1.2 - seg;
+        if (fz < 0.035 || fx < 0.008) v *= 0.78;
+        r = floorC[0] * v; g = floorC[1] * v; bl = floorC[2] * v;
+      }
+      for (let i = 0; i < boxes.length; i++){ const b = boxes[i]; if (b.rug || b.y0 > 0.05) continue;
+        const e = Math.max(b.x0 - hx, hx - b.x1, b.z0 - hz, hz - b.z1); if (e < 0.16){ const k = 0.72 + 0.28 * Math.max(e, 0) / 0.16; r *= k; g *= k; bl *= k; } }
+    } else if (face === 2){
+      ny = -1; [r, g, bl] = ceilC;
+      const lr = Math.hypot(hx - Lx, hz - Lz);
+      if (lr < 0.17){ r = g = bl = 300; emissive = true; } else if (lr < 0.6){ const k = 1 + 0.25 * (1 - lr / 0.6); r *= k; g *= k; bl *= k; }
+    } else {
+      const wall = ['E', 'W', '', '', 'N', 'S'][face];
+      if (face === 0) nx = -1; else if (face === 1) nx = 1; else if (face === 4) nz = -1; else nz = 1;
+      const u = (face <= 1) ? hz : hx;
+      let op = null;
+      for (let i = 0; i < ops.length; i++){ const o = ops[i]; if (o.wall === wall && u >= o.a - 0.05 && u <= o.b + 0.05 && hy >= o.y0 - 0.05 && hy <= o.y1 + 0.05){ op = o; break; } }
+      if (op){
+        const inside = u >= op.a && u <= op.b && hy >= op.y0 && hy <= op.y1;
+        const q = (hy - op.y0) / (op.y1 - op.y0), w = (u - op.a) / (op.b - op.a);
+        if (!inside){ if (op.kind === 'art' || op.kind === 'tv' || op.kind === 'mirror'){ [r, g, bl] = op.kind === 'art' ? hex('#2b2b2b') : hex('#9aa4ad'); } else { [r, g, bl] = frameC; } }
+        else if (op.kind === 'window'){
+          emissive = true;
+          const hill = 0.30 + 0.07 * Math.sin(w * 7 + op.a) + 0.04 * Math.sin(w * 17);
+          if (Math.abs(w - 0.5) < 0.012 || Math.abs(q - 0.62) < 0.015){ [r, g, bl] = [235, 235, 232]; }
+          else if (q < hill){ const k = 0.75 + 0.5 * q; r = 104 * k; g = 150 * k; bl = 98 * k; }
+          else { r = 196 - 70 * q; g = 224 - 40 * q; bl = 246 - 10 * q; }
+        } else if (op.kind === 'door'){
+          [r, g, bl] = doorC;
+          const pw2 = Math.abs(w - 0.5) < 0.38 && ((q > 0.08 && q < 0.45) || (q > 0.55 && q < 0.92));
+          const edge = pw2 && (Math.abs(Math.abs(w - 0.5) - 0.38) < 0.02 || Math.abs(q - 0.08) < 0.01 || Math.abs(q - 0.45) < 0.01 || Math.abs(q - 0.55) < 0.01 || Math.abs(q - 0.92) < 0.01);
+          if (edge){ r *= 0.75; g *= 0.75; bl *= 0.75; }
+          if (Math.hypot((w - 0.88) * 3, (q - 0.48) * 6) < 0.15){ [r, g, bl] = [200, 196, 186]; }
+        } else if (op.kind === 'pass'){
+          const base = op.col || wallC; const k = 0.42 + 0.22 * q;
+          r = base[0] * k; g = base[1] * k; bl = base[2] * k;
+          if (q < 0.04){ r = floorC[0] * 0.5; g = floorC[1] * 0.5; bl = floorC[2] * 0.5; }
+          emissive = true;
+        } else if (op.kind === 'art'){
+          const c = op.col || hex('#5ba3d9'); const k = 0.85 + 0.15 * Math.sin(w * 9 + q * 4); r = c[0] * k; g = c[1] * k; bl = c[2] * k;
+        } else if (op.kind === 'tv'){ r = 22; g = 26; bl = 30; if (w + q < 0.6 && w + q > 0.5){ r = g = bl = 50; } }
+        else if (op.kind === 'mirror'){ r = 186 + 30 * q; g = 210 + 20 * q; bl = 226 + 15 * q; emissive = true; }
+      } else {
+        [r, g, bl] = wallC;
+        const n = 0.985 + 0.015 * hash(Math.floor(u * 40) * 7 + Math.floor(hy * 40) * 13); r *= n; g *= n; bl *= n;
+        if (spec.tileWalls && hy < spec.tileWalls){
+          const s = 0.3, gu = u / s - Math.floor(u / s), gv = hy / s - Math.floor(hy / s);
+          if (gu < 0.025 || gv < 0.025){ [r, g, bl] = groutC; }
+        }
+        if (hy < 0.08 && !spec.tileWalls){ [r, g, bl] = frameC; }
+      }
+    }
+    if (!emissive){
+      const lx = Lx - hx, ly = Ly - hy, lz = Lz - hz, ld = Math.hypot(lx, ly, lz) || 1;
+      const nd = Math.max(0, (nx * lx + ny * ly + nz * lz) / ld);
+      let lit = 0.60 + 0.42 * nd / (1 + 0.035 * ld * ld);
+      let m;
+      if (hb) m = 1;
+      else if (face <= 1) m = Math.min(hy, rh - hy, hz, rd - hz);
+      else if (face >= 4) m = Math.min(hy, rh - hy, hx, rw - hx);
+      else m = Math.min(hx, rw - hx, hz, rd - hz);
+      lit *= 1 - 0.24 * Math.exp(-m / 0.28);
+      r *= lit; g *= lit; bl *= lit;
+    }
+    out[0] = r; out[1] = g; out[2] = bl;
+  }
+
+  const dir = [0, 0, 0];
+  function dirAt(xf, yf){
+    let dx, dy, dz;
+    if (!view){ const th = (xf / W - 0.5) * TAU, phi = (0.5 - yf / H) * Math.PI, cp = Math.cos(phi); dx = Math.sin(th) * cp; dy = Math.sin(phi); dz = Math.cos(th) * cp; }
+    else {
+      const nx = (2 * xf / W - 1) * tf, ny = (1 - 2 * yf / H) * tf * H / W;
+      dx = fs + nx * fc; dy = ny; dz = fc - nx * fs;
+      const l = Math.hypot(dx, dy, dz); dx /= l; dy /= l; dz /= l;
+    }
+    dir[0] = dx; dir[1] = dy; dir[2] = dz;
+  }
+  // Pasada principal: un rayo por píxel
+  let i = 0;
+  for (let y = 0; y < H; y++){
+    let sp = 0, cp = 0;
+    if (!view){ const phi = (0.5 - (y + 0.5) / H) * Math.PI; sp = Math.sin(phi); cp = Math.cos(phi); }
+    for (let x = 0; x < W; x++, i += 4){
+      if (!view) trace(colSin[x] * cp, sp, colCos[x] * cp);
+      else { dirAt(x + 0.5, y + 0.5); trace(dir[0], dir[1], dir[2]); }
+      px[i] = Math.min(255, out[0]); px[i + 1] = Math.min(255, out[1]); px[i + 2] = Math.min(255, out[2]); px[i + 3] = 255;
+    }
+  }
+  // Suavizado: solo en los bordes (donde el color cambia bruscamente) lanzamos 4 rayos más
+  const mark = new Uint8Array(W * H);
+  for (let y = 0; y < H - 1; y++){
+    for (let x = 0; x < W - 1; x++){
+      const k = (y * W + x) * 4, kr = k + 4, kd = k + W * 4;
+      const dr = Math.abs(px[k] - px[kr]) + Math.abs(px[k + 1] - px[kr + 1]) + Math.abs(px[k + 2] - px[kr + 2]);
+      const dd = Math.abs(px[k] - px[kd]) + Math.abs(px[k + 1] - px[kd + 1]) + Math.abs(px[k + 2] - px[kd + 2]);
+      if (dr > 40){ mark[y * W + x] = 1; mark[y * W + x + 1] = 1; }
+      if (dd > 40){ mark[y * W + x] = 1; mark[(y + 1) * W + x] = 1; }
+    }
+  }
+  const OFF = [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
+  for (let y = 0; y < H; y++){
+    for (let x = 0; x < W; x++){
+      if (!mark[y * W + x]) continue;
+      let r = 0, g = 0, bl = 0;
+      for (let o = 0; o < 4; o++){
+        dirAt(x + OFF[o][0], y + OFF[o][1]); trace(dir[0], dir[1], dir[2]);
+        r += Math.min(255, out[0]); g += Math.min(255, out[1]); bl += Math.min(255, out[2]);
+      }
+      const k = (y * W + x) * 4; px[k] = r / 4; px[k + 1] = g / 4; px[k + 2] = bl / 4;
+    }
+  }
+  ctx.putImageData(im, 0, 0);
+  return cv;
+}
+
+/* Espacios del inmueble demo (medidas en metros: x = ancho, y = alto, z = fondo) */
+const DEMO_SPECS = [
+  { id:'entrada', name:'Entrada', size:[2.4, 2.5, 3.2], cam:[1.2, 1.0], wall:'#ece6dc', start:0,
+    openings:[ {wall:'S', a:0.7, b:1.6, y0:0, y1:2.1, kind:'door'}, {wall:'N', a:0.5, b:1.9, y0:0, y1:2.2, kind:'pass', to:'sala'},
+               {wall:'W', a:1.3, b:2.1, y0:1.2, y1:1.8, kind:'art', c:'#c9a27a'} ],
+    boxes:[ {p:[2.05, 0, 1.6], q:[2.4, 0.8, 2.6], c:'#8a6446', wood:true} ] },
+  { id:'sala', name:'Sala-comedor', size:[6.0, 2.5, 4.6], cam:[3.0, 2.2], wall:'#efeae2', start:60,
+    openings:[ {wall:'S', a:2.4, b:3.6, y0:0, y1:2.2, kind:'pass', to:'entrada'}, {wall:'N', a:0.8, b:2.0, y0:0, y1:2.2, kind:'pass', to:'cocina'},
+               {wall:'W', a:2.9, b:3.9, y0:0, y1:2.2, kind:'pass'}, {wall:'E', a:0.8, b:3.8, y0:0.15, y1:2.3, kind:'window'},
+               {wall:'W', a:1.0, b:2.2, y0:0.95, y1:1.65, kind:'tv'}, {wall:'N', a:3.4, b:4.4, y0:1.25, y1:1.95, kind:'art', c:'#d7b48a'} ],
+    boxes:[ {p:[1.2, 0, 0.9], q:[3.8, 0.012, 2.7], c:'#d9cdb8'},
+            {p:[0, 0, 0.8], q:[0.45, 0.5, 2.4], c:'#7d5a40', wood:true},
+            {p:[3.4, 0, 0.9], q:[4.3, 0.42, 2.6], c:'#8fa3b5'}, {p:[4.08, 0, 0.9], q:[4.36, 0.86, 2.6], c:'#7f95a8'},
+            {p:[3.3, 0, 0.85], q:[4.36, 0.62, 1.0], c:'#7f95a8'}, {p:[3.3, 0, 2.5], q:[4.36, 0.62, 2.65], c:'#7f95a8'},
+            {p:[2.0, 0, 1.4], q:[2.8, 0.38, 2.1], c:'#a07850', wood:true},
+            {p:[4.4, 0.72, 3.25], q:[5.6, 0.77, 4.15], c:'#a07850', wood:true}, {p:[4.92, 0, 3.6], q:[5.08, 0.72, 3.8], c:'#6e5038'},
+            {p:[4.6, 0, 2.75], q:[5.0, 0.46, 3.1], c:'#e9e4da', top:'#f1ede5'}, {p:[5.0, 0, 2.75], q:[5.4, 0.46, 3.1], c:'#e9e4da'},
+            {p:[4.6, 0, 4.3], q:[5.0, 0.46, 4.6], c:'#e9e4da'}, {p:[4.6, 0.46, 4.52], q:[5.0, 0.95, 4.6], c:'#e9e4da'} ] },
+  { id:'cocina', name:'Cocina', size:[3.2, 2.5, 2.8], cam:[1.7, 1.3], wall:'#f1efe9', floor:'tile', floorColor:'#d9d4cb', start:0,
+    openings:[ {wall:'S', a:1.0, b:2.2, y0:0, y1:2.2, kind:'pass', to:'sala'}, {wall:'W', a:0.9, b:1.9, y0:0, y1:2.2, kind:'pass', to:'habitacion'},
+               {wall:'N', a:1.5, b:2.3, y0:1.05, y1:2.0, kind:'window'} ],
+    boxes:[ {p:[0, 0, 2.1], q:[0.7, 1.85, 2.8], c:'#cfd5da'},
+            {p:[0.7, 0, 2.2], q:[3.2, 0.88, 2.8], c:'#c8a882', top:'#b9bcbf', wood:true}, {p:[2.6, 0, 0.5], q:[3.2, 0.88, 2.2], c:'#c8a882', top:'#b9bcbf', wood:true},
+            {p:[0.7, 1.55, 2.45], q:[1.35, 2.25, 2.8], c:'#ece7dd'}, {p:[2.45, 1.55, 2.45], q:[3.2, 2.25, 2.8], c:'#ece7dd'},
+            {p:[2.85, 1.55, 0.5], q:[3.2, 2.25, 2.2], c:'#ece7dd'} ] },
+  { id:'habitacion', name:'Habitación principal', size:[3.6, 2.5, 3.4], cam:[1.7, 1.2], wall:'#e3ebf2', start:10,
+    openings:[ {wall:'E', a:0.4, b:1.3, y0:0, y1:2.15, kind:'pass', to:'cocina'}, {wall:'E', a:2.3, b:3.0, y0:0, y1:2.1, kind:'pass', to:'bano', c:'#dfe6ea'},
+               {wall:'S', a:1.2, b:2.6, y0:0.9, y1:2.1, kind:'window'}, {wall:'N', a:1.2, b:2.2, y0:1.4, y1:1.95, kind:'art', c:'#c98f6b'} ],
+    boxes:[ {p:[0.9, 0, 1.4], q:[2.5, 0.55, 3.4], c:'#f3f1ec'}, {p:[0.85, 0, 3.3], q:[2.55, 1.1, 3.4], c:'#8a6446', wood:true},
+            {p:[1.0, 0.55, 2.85], q:[1.6, 0.68, 3.25], c:'#ffffff'}, {p:[1.8, 0.55, 2.85], q:[2.4, 0.68, 3.25], c:'#ffffff'},
+            {p:[0.9, 0.55, 1.4], q:[2.5, 0.6, 2.3], c:'#5ba3d9'},
+            {p:[0.4, 0, 2.95], q:[0.82, 0.55, 3.4], c:'#a07850', wood:true}, {p:[2.58, 0, 2.95], q:[3.0, 0.55, 3.4], c:'#a07850', wood:true},
+            {p:[0, 0, 0.2], q:[0.6, 2.3, 2.0], c:'#b89270', wood:true} ] },
+  { id:'bano', name:'Baño', size:[1.9, 2.4, 2.4], cam:[0.95, 1.0], wall:'#eef2f4', floor:'tile', floorColor:'#c9cfd4', tileSize:0.3, tileWalls:1.6, start:0,
+    openings:[ {wall:'S', a:0.55, b:1.3, y0:0, y1:2.1, kind:'pass', to:'habitacion', c:'#e3ebf2'}, {wall:'N', a:0.7, b:1.25, y0:1.75, y1:2.15, kind:'window'},
+               {wall:'W', a:1.05, b:1.75, y0:1.15, y1:1.85, kind:'mirror'} ],
+    boxes:[ {p:[0, 0, 1.0], q:[0.5, 0.85, 1.8], c:'#ffffff', top:'#f2f2f2'}, {p:[1.5, 0, 0.9], q:[1.9, 0.42, 1.35], c:'#fafafa'},
+            {p:[1.75, 0.42, 0.9], q:[1.9, 0.8, 1.35], c:'#fafafa'} ] }
+];
+
+function openingYaw(spec, o){
+  const c = (o.a + o.b) / 2; let px, pz;
+  if (o.wall === 'N'){ px = c; pz = spec.size[2]; } else if (o.wall === 'S'){ px = c; pz = 0; }
+  else if (o.wall === 'E'){ px = spec.size[0]; pz = c; } else { px = 0; pz = c; }
+  const dx = px - spec.cam[0], dz = pz - spec.cam[1];
+  const dist = Math.hypot(dx, dz);
+  return { yaw: Math.atan2(dx, dz) / D2R, pitch: Math.max(-28, Math.atan2(0.95 - 1.5, dist) / D2R) };
+}
+
+const DEMO = { id:'demo', title:'Apartamento en Laureles', location:'Laureles · Medellín, Antioquia', price:1800000,
+  meta:['1 habitación', '1 baño', '52 m²', 'Piso 3', 'Recorrido de 5 espacios'], editable:false, scenes:[] };
+let demoPromise = null;
+function buildDemo(onProgress){
+  if (demoPromise) return demoPromise;
+  demoPromise = (async () => {
+    for (let k = 0; k < DEMO_SPECS.length; k++){
+      const spec = DEMO_SPECS[k];
+      onProgress && onProgress(k, DEMO_SPECS.length);
+      await nextFrame();
+      const pano = renderRoom(spec, 2048, 1024);
+      const url = await canvasToURL(pano, 0.9);
+      const th = renderRoom(spec, 320, 200, { yaw: spec.start, fov: 90 });
+      const prev = DEMO_SPECS[k - 1], next = DEMO_SPECS[k + 1];
+      const toNext = next && spec.openings.find(o => o.to === next.id);
+      const toPrev = prev && spec.openings.find(o => o.to === prev.id);
+      const n = toNext ? openingYaw(spec, toNext) : null, p = toPrev ? openingYaw(spec, toPrev) : null;
+      DEMO.scenes.push({ id:spec.id, name:spec.name, url, thumb:th.toDataURL('image/jpeg', 0.8), haov:360, vaov:180, full:true,
+        startYaw:spec.start, nextYaw:n ? n.yaw : 0, nextPitch:n ? n.pitch : -14, prevYaw:p ? p.yaw : 180, prevPitch:p ? p.pitch : -14 });
+    }
+    return DEMO;
+  })();
+  return demoPromise;
+}
+
+/* ================= Navegación entre vistas ================= */
+let currentView = 'home';
+function showView(v){
+  currentView = v;
+  ['home', 'tour', 'create'].forEach(n => { $('#view-' + n).hidden = n !== v; });
+  if (v !== 'tour') destroyViewer();
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+}
+document.addEventListener('click', e => {
+  const fake = e.target.closest('[data-fake]');
+  if (fake){ e.preventDefault(); toast('Disponible en la siguiente versión del prototipo.'); return; }
+  const go = e.target.closest('[data-go]');
+  if (go){
+    e.preventDefault();
+    const to = go.dataset.go;
+    if (to === 'home') showView('home');
+    else if (to === 'create'){ showView('create'); }
+    else if (to === 'tour-demo') openDemo();
+    return;
+  }
+  if (e.target.closest('[data-back]')){
+    e.preventDefault();
+    if (activeTour && activeTour.editable) showView('create'); else showView('home');
+  }
+});
+
+/* ================= Visor (Pannellum) ================= */
+let viewer = null, activeTour = null, activeIndex = 0;
+function destroyViewer(){ if (viewer){ try { viewer.destroy(); } catch (e) {} viewer = null; } }
+
+function hotspotTooltip(div, args){
+  div.classList.add('hs-nav'); if (args.back) div.classList.add('back');
+  div.innerHTML = args.back ? ICON_BACK : ICON_NEXT;
+  const l = document.createElement('span'); l.className = 'hs-label'; l.textContent = args.label; div.appendChild(l);
+  div.setAttribute('title', args.label);
+}
+function hotspotsFor(tour, i){
+  const s = tour.scenes[i], list = [];
+  const nx = tour.scenes[i + 1], pv = tour.scenes[i - 1];
+  if (nx) list.push({ id:'next', pitch:s.nextPitch, yaw:s.nextYaw, type:'scene', sceneId:nx.id, targetYaw:nx.startYaw || 0, targetPitch:0,
+    cssClass:'hs-wrap', createTooltipFunc:hotspotTooltip, createTooltipArgs:{ label:'Ir a ' + nx.name, back:false } });
+  if (pv) list.push({ id:'prev', pitch:s.prevPitch, yaw:s.prevYaw, type:'scene', sceneId:pv.id, targetYaw:pv.startYaw || 0, targetPitch:0,
+    cssClass:'hs-wrap', createTooltipFunc:hotspotTooltip, createTooltipArgs:{ label:'Volver a ' + pv.name, back:true } });
+  return list;
+}
+function sceneConfig(tour, i){
+  const s = tour.scenes[i];
+  const c = { type:'equirectangular', panorama:s.url, yaw:s.startYaw || 0, pitch:0, hfov:100, minHfov:45, maxHfov:115,
+    hotSpots:hotspotsFor(tour, i) };
+  if (!s.full){
+    c.haov = s.haov; c.vaov = s.vaov; c.vOffset = 0;
+    c.avoidShowingBackground = true;
+    c.minPitch = -s.vaov / 2; c.maxPitch = s.vaov / 2;
+    if (s.haov < 360){ c.minYaw = -s.haov / 2; c.maxYaw = s.haov / 2; }
+    c.hfov = Math.min(100, s.haov);
+  }
+  return c;
+}
+function buildViewer(tour, start){
+  destroyViewer();
+  activeTour = tour; activeIndex = start || 0;
+  if (typeof window.pannellum === 'undefined'){
+    $('#viewerLoading').hidden = false;
+    $('#viewerLoading').textContent = 'No se pudo cargar el visor. Revisa tu conexión a internet.';
+    return;
+  }
+  const scenes = {};
+  tour.scenes.forEach((s, i) => { scenes[s.id] = sceneConfig(tour, i); });
+  viewer = pannellum.viewer('pano', {
+    default:{ firstScene:tour.scenes[activeIndex].id, sceneFadeDuration:700, autoLoad:true, showControls:true, compass:false,
+      strings:{ loadingLabel:'Cargando…', loadButtonLabel:'Ver recorrido', genericWebGLError:'Tu navegador no puede mostrar el recorrido (WebGL no disponible).',
+        textureSizeError:'La imagen es demasiado grande para este dispositivo.', unknownError:'Ocurrió un error al mostrar la imagen.' } },
+    scenes
+  });
+  viewer.on('load', () => { $('#viewerLoading').hidden = true; });
+  viewer.on('scenechange', id => { const k = activeTour.scenes.findIndex(s => s.id === id); if (k >= 0){ activeIndex = k; updateTourUI(); } });
+  viewer.on('mousedown', hideHint); viewer.on('touchstart', hideHint);
+  viewer.on('error', msg => { console.warn('Pannellum:', msg); });
+  updateTourUI();
+}
+function hideHint(){ const h = $('#dragHint'); if (h) h.style.opacity = '0'; }
+function goTo(i){
+  if (!viewer || !activeTour) return;
+  i = Math.max(0, Math.min(activeTour.scenes.length - 1, i));
+  const s = activeTour.scenes[i];
+  viewer.loadScene(s.id, 0, s.startYaw || 0);
+}
+$('#prevBtn').addEventListener('click', () => goTo(activeIndex - 1));
+$('#nextBtn').addEventListener('click', () => goTo(activeIndex + 1));
+
+function renderStrip(tour){
+  const strip = $('#strip'); strip.innerHTML = '';
+  tour.scenes.forEach((s, i) => {
+    const b = document.createElement('button'); b.className = 'strip-item'; b.setAttribute('role', 'listitem');
+    const img = document.createElement('img'); img.src = s.thumb; img.alt = ''; img.loading = 'lazy';
+    const sp = document.createElement('span'); const n = document.createElement('b'); n.textContent = String(i + 1).padStart(2, '0');
+    sp.appendChild(n); sp.appendChild(document.createTextNode(s.name));
+    b.append(img, sp); b.addEventListener('click', () => goTo(i)); strip.appendChild(b);
+  });
+}
+function updateTourUI(){
+  if (!activeTour) return;
+  const s = activeTour.scenes[activeIndex];
+  $('#sceneName').textContent = s.name;
+  $('#sceneCount').textContent = (activeIndex + 1) + ' / ' + activeTour.scenes.length;
+  $$('.strip-item').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+  const act = $$('.strip-item')[activeIndex], strip = $('#strip');
+  if (act){ const l = act.offsetLeft - strip.offsetLeft, r = l + act.offsetWidth;
+    if (l < strip.scrollLeft || r > strip.scrollLeft + strip.clientWidth) strip.scrollTo({ left: l - 8, behavior:'smooth' }); }
+  $('#prevBtn').disabled = activeIndex === 0;
+  $('#nextBtn').disabled = activeIndex === activeTour.scenes.length - 1;
+}
+function setTourHeader(t){
+  $('#tourEyebrow').textContent = t.editable ? 'Vista previa de tu recorrido' : 'Recorrido virtual · Demo';
+  $('#tourTitle').textContent = t.title;
+  $('#tourLoc').textContent = t.location;
+  const p = $('#tourPrice');
+  if (t.price){ p.hidden = false; p.innerHTML = ''; p.append(fmtM(t.price) + ' '); const sm = document.createElement('small'); sm.textContent = '/ mes'; p.appendChild(sm); } else p.hidden = true;
+  $('#editBar').hidden = !t.editable;
+  $('#backLabel').textContent = t.editable ? 'Volver a editar' : 'Volver al inicio';
+  $('#tourNote').textContent = t.editable
+    ? 'Este recorrido vive solo en este navegador. En la versión con base de datos tendrá un enlace para compartir.'
+    : 'Inmueble demo con datos ficticios. Las panorámicas de este ejemplo son generadas por computador; las tuyas serán fotos reales.';
+  $('#dragHint').style.opacity = '1';
+}
+async function openDemo(){
+  showView('tour');
+  const L = $('#viewerLoading'); L.hidden = false;
+  setTourHeader(DEMO);
+  $('#strip').innerHTML = ''; $('#sceneName').textContent = '—'; $('#sceneCount').textContent = '';
+  await buildDemo((k, n) => { L.textContent = 'Preparando recorrido · ' + (k + 1) + ' de ' + n; });
+  if (currentView !== 'tour') return;
+  L.textContent = 'Cargando…';
+  renderStrip(DEMO); buildViewer(DEMO, 0);
+}
+
+/* Ajuste de flechas en recorridos propios */
+function placeHotspot(kind){
+  if (!viewer || !activeTour || !activeTour.editable) return;
+  const s = activeTour.scenes[activeIndex];
+  const yaw = viewer.getYaw(), pitch = Math.min(-4, viewer.getPitch());
+  if (kind === 'start'){ s.startYaw = yaw; toast('Vista inicial guardada para «' + s.name + '».'); return; }
+  const hasTarget = kind === 'next' ? activeTour.scenes[activeIndex + 1] : activeTour.scenes[activeIndex - 1];
+  if (!hasTarget){ toast(kind === 'next' ? 'Este es el último espacio: no hay siguiente.' : 'Este es el primer espacio: no hay anterior.'); return; }
+  if (kind === 'next'){ s.nextYaw = yaw; s.nextPitch = pitch; } else { s.prevYaw = yaw; s.prevPitch = pitch; }
+  try { viewer.removeHotSpot(kind, s.id); } catch (e) {}
+  const hs = hotspotsFor(activeTour, activeIndex).find(h => h.id === kind);
+  if (hs) viewer.addHotSpot(hs, s.id);
+  toast('Flecha actualizada.');
+}
+$('#setNext').addEventListener('click', () => placeHotspot('next'));
+$('#setPrev').addEventListener('click', () => placeHotspot('prev'));
+$('#setStart').addEventListener('click', () => placeHotspot('start'));
+
+/* ================= Asistente (tutorial) ================= */
+const TOTAL_STEPS = 6;
+let step = 1;
+const stepper = $('#stepper');
+for (let k = 1; k <= TOTAL_STEPS; k++){
+  const b = document.createElement('button'); b.setAttribute('aria-label', 'Ir al paso ' + k);
+  b.addEventListener('click', () => setStep(k)); stepper.appendChild(b);
+}
+function setStep(k){
+  step = Math.max(1, Math.min(TOTAL_STEPS, k));
+  $$('.step').forEach(el => { el.hidden = +el.dataset.step !== step; });
+  $$('#stepper button').forEach((b, i) => { b.className = i + 1 < step ? 'done' : i + 1 === step ? 'current' : ''; });
+  $('#backStep').disabled = step === 1;
+  $('#nextStep').hidden = step === TOTAL_STEPS;
+  $('#skipBtn').hidden = step === TOTAL_STEPS;
+  $('#nextStep').textContent = step === TOTAL_STEPS - 1 ? 'Subir fotos' : 'Siguiente';
+}
+$('#nextStep').addEventListener('click', () => setStep(step + 1));
+$('#backStep').addEventListener('click', () => setStep(step - 1));
+$('#skipBtn').addEventListener('click', () => setStep(TOTAL_STEPS));
+setStep(1);
+
+/* ================= Carga de panorámicas ================= */
+const mine = { scenes: [] };
+let seq = 0;
+const ANGLES = [['auto', 'Ángulo automático'], ['360', 'Vuelta completa (360°)'], ['270', 'Tres cuartos (270°)'], ['180', 'Media vuelta (180°)'], ['90', 'Un cuarto (90°)']];
+
+function loadImageEl(file){
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => { res(img); }; img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('formato')); }; img.src = u;
+  });
+}
+async function decode(file){
+  if ('createImageBitmap' in window){
+    try { return await createImageBitmap(file, { imageOrientation:'from-image' }); } catch (e) {}
+  }
+  return loadImageEl(file);
+}
+async function processFile(file){
+  const src = await decode(file);
+  const w = src.width, h = src.height;
+  // Normalizamos: máximo 4096 px de ancho y 2048 de alto (lo que soportan casi todos los celulares)
+  const s = Math.min(1, 4096 / w, 2048 / h);
+  const cw = Math.round(w * s), ch = Math.round(h * s);
+  const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  cv.getContext('2d').drawImage(src, 0, 0, cw, ch);
+  const url = await canvasToURL(cv, 0.88);
+  // Miniatura: recorte central 16:10
+  const tw = 320, th = 200, cropW = Math.min(cw, ch * 1.6), cropH = cropW / 1.6;
+  const tc = document.createElement('canvas'); tc.width = tw; tc.height = th;
+  tc.getContext('2d').drawImage(cv, (cw - cropW) / 2, (ch - cropH) / 2, cropW, cropH, 0, 0, tw, th);
+  // Versión reducida para la IA (ancho 1024)
+  const as = Math.min(1, 1024 / cw, 512 / ch);
+  const ac = document.createElement('canvas'); ac.width = Math.round(cw * as); ac.height = Math.round(ch * as);
+  ac.getContext('2d').drawImage(cv, 0, 0, ac.width, ac.height);
+  if (src.close) src.close();
+  const aspect = w / h;
+  let est = Math.round(Math.min(360, aspect * 60));
+  if (est >= 320) est = 360;
+  return { id:'s' + (++seq), name:'', nameByAI:false, url, thumb:tc.toDataURL('image/jpeg', 0.8), aiImg:ac.toDataURL('image/jpeg', 0.7),
+    aspect, angle:'auto', autoHaov:est, isPano:aspect >= 2, time:file.lastModified || 0, file:file.name, warn:'' };
+}
+function haovOf(s){ return s.angle === 'auto' ? s.autoHaov : +s.angle; }
+
+async function addFiles(fileList){
+  const files = Array.from(fileList).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name));
+  if (!files.length) return;
+  const room = MAX_FILES - mine.scenes.length;
+  if (room <= 0){ toast('Máximo ' + MAX_FILES + ' panorámicas.'); return; }
+  const take = files.slice(0, room).sort((a, b) => (a.lastModified || 0) - (b.lastModified || 0));
+  setStatus('<span class="spinner"></span>Procesando ' + take.length + (take.length === 1 ? ' foto…' : ' fotos…'));
+  const failed = [];
+  for (const f of take){
+    try { mine.scenes.push(await processFile(f)); } catch (e) { failed.push(f.name); }
+    renderList();
+  }
+  // Mantener el orden por hora de captura entre todas las fotos cargadas
+  mine.scenes.sort((a, b) => a.time - b.time);
+  renderList();
+  if (failed.length){
+    setStatus('No pudimos leer: ' + escapeHTML(failed.join(', ')) + '. Si son fotos de iPhone (HEIC), cambia el formato a «Más compatible» o envíalas como JPG.', 'warn');
+  } else {
+    const notPano = mine.scenes.filter(s => !s.isPano).length;
+    setStatus(notPano ? notPano + (notPano === 1 ? ' foto no parece panorámica' : ' fotos no parecen panorámicas') + '. Se verán, pero con un giro limitado.' : 'Listo. Revisa el orden y los nombres, o usa «Organizar con IA».', notPano ? 'warn' : 'ok');
+  }
+  if (files.length > room) toast('Solo se agregaron ' + room + ' fotos (máximo ' + MAX_FILES + ').');
+}
+function escapeHTML(t){ return String(t).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+function setStatus(html, kind){
+  const el = $('#aiStatus');
+  if (!html){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="status ' + (kind || '') + '">' + html + '</div>';
+}
+
+const ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>';
+const ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+function renderList(){
+  const ul = $('#sceneList'); ul.innerHTML = '';
+  mine.scenes.forEach((s, i) => {
+    const li = document.createElement('li'); li.className = 'scene-item';
+    const num = document.createElement('div'); num.className = 'scene-num'; num.textContent = i + 1;
+    const img = document.createElement('img'); img.src = s.thumb; img.alt = 'Miniatura de ' + (s.name || 'espacio ' + (i + 1));
+    const fields = document.createElement('div'); fields.className = 'scene-fields';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 40; inp.value = s.name;
+    inp.placeholder = i === 0 ? 'Entrada' : 'Ej: Sala, Cocina, Habitación 2…';
+    inp.setAttribute('aria-label', 'Nombre del espacio ' + (i + 1));
+    inp.addEventListener('input', () => { s.name = inp.value; s.nameByAI = false; });
+    const sub = document.createElement('div'); sub.className = 'scene-sub';
+    if (i === 0){ const t = document.createElement('span'); t.className = 'tag-start'; t.textContent = 'Punto de partida'; sub.appendChild(t); }
+    if (s.nameByAI){ const t = document.createElement('span'); t.className = 'tag-ai'; t.textContent = 'Nombre sugerido por IA'; sub.appendChild(t); }
+    const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Ángulo de la panorámica');
+    ANGLES.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = v === 'auto' ? l + ' (~' + s.autoHaov + '°)' : l; sel.appendChild(o); });
+    sel.value = s.angle; sel.addEventListener('change', () => { s.angle = sel.value; });
+    sub.appendChild(sel);
+    fields.append(inp, sub);
+    if (!s.isPano || s.warn){ const w = document.createElement('div'); w.className = 'tag-warn'; w.textContent = s.warn || 'No parece una panorámica: tendrá un giro limitado.'; fields.appendChild(w); }
+    const ctrl = document.createElement('div'); ctrl.className = 'scene-ctrl';
+    const up = mkIconBtn(ICON_UP, 'Subir', () => move(i, -1)); up.disabled = i === 0;
+    const dn = mkIconBtn(ICON_DOWN, 'Bajar', () => move(i, 1)); dn.disabled = i === mine.scenes.length - 1;
+    const rm = mkIconBtn(ICON_X, 'Quitar', () => { mine.scenes.splice(i, 1); renderList(); });
+    ctrl.append(up, dn, rm);
+    li.append(num, img, fields, ctrl); ul.appendChild(li);
+  });
+  $('#uploadActions').hidden = mine.scenes.length === 0;
+  $('#buildBtn').disabled = mine.scenes.length === 0;
+}
+function mkIconBtn(svg, label, fn){ const b = document.createElement('button'); b.className = 'icon-btn'; b.innerHTML = svg; b.setAttribute('aria-label', label); b.title = label; b.addEventListener('click', fn); return b; }
+function move(i, d){ const j = i + d; if (j < 0 || j >= mine.scenes.length) return; const t = mine.scenes[i]; mine.scenes[i] = mine.scenes[j]; mine.scenes[j] = t; renderList(); }
+
+const fileInput = $('#fileInput'), dz = $('#dropzone');
+fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+$('#clearBtn').addEventListener('click', () => { if (!confirm('¿Quitar todas las fotos cargadas?')) return; mine.scenes = []; renderList(); setStatus(''); });
+
+/* ================= IA: nombrar espacios y revisar calidad ================= */
+let suggestedOrder = null;
+$('#aiBtn').addEventListener('click', async () => {
+  if (!mine.scenes.length) return;
+  const btn = $('#aiBtn'); btn.disabled = true;
+  setStatus('<span class="spinner"></span>La IA está revisando tus panorámicas…');
+  try {
+    const res = await fetch(AI_ENDPOINT, { method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ imagenes: mine.scenes.map((s, i) => ({ id:s.id, orden:i + 1, imagen:s.aiImg })) }) });
+    let data = null; try { data = await res.json(); } catch (e) {}
+    if (!res.ok || !data) throw new Error((data && data.error) || ('Error ' + res.status));
+    applyAI(data);
+  } catch (err) {
+    const local = location.protocol === 'file:';
+    setStatus(local
+      ? 'La IA solo funciona cuando la página está publicada en Vercel con la variable OPENAI_API_KEY. Mientras tanto, puedes nombrar y ordenar los espacios a mano.'
+      : 'No pudimos usar la IA: ' + escapeHTML(err.message || 'error desconocido') + '. Puedes nombrar y ordenar los espacios a mano.', 'warn');
+  } finally { btn.disabled = false; }
+});
+function applyAI(data){
+  const byId = {}; mine.scenes.forEach(s => { byId[s.id] = s; });
+  (Array.isArray(data.escenas) ? data.escenas : []).forEach(e => {
+    const s = byId[e && e.id]; if (!s) return;
+    if (typeof e.nombre === 'string' && e.nombre.trim() && (!s.name.trim() || s.nameByAI)){ s.name = e.nombre.trim().slice(0, 40); s.nameByAI = true; }
+    s.warn = (e.calidad === 'revisar' && typeof e.nota === 'string') ? ('Revisar: ' + e.nota.slice(0, 140)) : '';
+  });
+  renderList();
+  const parts = [];
+  const notes = (Array.isArray(data.advertencias) ? data.advertencias : []).filter(x => typeof x === 'string').slice(0, 5);
+  const ids = mine.scenes.map(s => s.id).join(',');
+  const ord = Array.isArray(data.orden_sugerido) ? data.orden_sugerido : null;
+  const valid = ord && ord.length === mine.scenes.length && ord.slice().sort().join(',') === mine.scenes.map(s => s.id).sort().join(',');
+  suggestedOrder = null;
+  parts.push('<strong>Listo.</strong> La IA nombró los espacios y revisó la calidad. Puedes corregir cualquier nombre.');
+  if (notes.length) parts.push('<ul>' + notes.map(n => '<li>' + escapeHTML(n) + '</li>').join('') + '</ul>');
+  if (valid && ord.join(',') !== ids){
+    suggestedOrder = ord;
+    const names = ord.map((id, k) => (k + 1) + '. ' + escapeHTML(byId[id].name || 'Espacio')).join(' → ');
+    parts.push('<div style="margin-top:.6rem"><strong>Sugerencia de orden:</strong> ' + names +
+      (data.motivo_orden ? '<br><span style="font-size:.85rem">' + escapeHTML(String(data.motivo_orden).slice(0, 200)) + '</span>' : '') +
+      '<br><button class="btn btn-ghost btn-sm" id="applyOrder">Aplicar este orden</button></div>');
+  }
+  setStatus(parts.join(''), 'ok');
+  const ap = $('#applyOrder');
+  if (ap) ap.addEventListener('click', () => {
+    if (!suggestedOrder) return;
+    mine.scenes = suggestedOrder.map(id => byId[id]); suggestedOrder = null; renderList();
+    setStatus('Orden aplicado. Revisa que la primera foto sea la entrada.', 'ok');
+  });
+}
+
+/* ================= Generar recorrido propio ================= */
+$('#buildBtn').addEventListener('click', () => {
+  if (!mine.scenes.length) return;
+  const scenes = mine.scenes.map((s, i) => {
+    const haov = haovOf(s), full = haov >= 360;
+    const vaov = Math.min(150, haov / s.aspect);
+    const name = s.name.trim() || (i === 0 ? 'Entrada' : 'Espacio ' + (i + 1));
+    const old = s.nav || {};
+    const edge = full ? 0 : Math.max(0, haov / 2 - 14);
+    return { id:s.id, name, url:s.url, thumb:s.thumb, haov:full ? 360 : haov, vaov:full ? Math.min(180, 360 / s.aspect) : vaov, full:false,
+      startYaw: old.startYaw != null ? old.startYaw : 0,
+      nextYaw: old.nextYaw != null ? old.nextYaw : (full ? 0 : edge), nextPitch: old.nextPitch != null ? old.nextPitch : -10,
+      prevYaw: old.prevYaw != null ? old.prevYaw : (full ? 180 : -edge), prevPitch: old.prevPitch != null ? old.prevPitch : -10, src:s };
+  });
+  const tour = { id:'mine', title:'Tu inmueble', location:'Borrador · sin publicar', price:0, editable:true, scenes };
+  // Guardar ajustes de flechas en la foto original para no perderlos al volver a editar
+  tour.scenes.forEach(sc => { sc.src.nav = sc; });
+  showView('tour'); setTourHeader(tour);
+  $('#viewerLoading').hidden = false; $('#viewerLoading').textContent = 'Cargando…';
+  renderStrip(tour); buildViewer(tour, 0);
+});
+
+/* ================= Home: tarjeta del demo ================= */
+function paintCard(){
+  const cv = $('#cardCanvas');
+  const spec = DEMO_SPECS[1];
+  const img = renderRoom(spec, 640, 400, { yaw:58, fov:88 });
+  cv.getContext('2d').drawImage(img, 0, 0);
+  $('#cardPrice').textContent = fmtM(DEMO.price);
+  $('#cardTitle').textContent = DEMO.title; $('#cardLoc').textContent = DEMO.location;
+  const meta = $('#cardMeta'); DEMO.meta.forEach(m => { const s = document.createElement('span'); s.textContent = m; meta.appendChild(s); });
+}
+paintCard();
+// Pre-generar el demo en segundo plano para que abra rápido
+(window.requestIdleCallback || (f => setTimeout(f, 600)))(() => buildDemo());
+
+/* Reveal */
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold:0.12 }) : null;
+$$('.reveal').forEach(el => io ? io.observe(el) : el.classList.add('in'));
+
+// Exponer para pruebas
+window.__r360 = { openDemo, showView, setStep, mine, addFiles, renderRoom, DEMO_SPECS, getViewer:() => viewer };
+})();
+</script>
+</body>
+</html>
